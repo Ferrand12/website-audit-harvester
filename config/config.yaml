@@ -1,0 +1,36 @@
+# Google PageSpeed Insights API key.
+# Leave empty to run without a key (works but may be rate-limited by Google).
+# Set via this file or PSI_API_KEY environment variable.
+psi_api_key: ""
+
+# HTTP timeout for PSI requests (seconds)
+timeout_seconds: 30
+
+# Retry count for transient failures (429, 5xx)
+max_retries: 3
+
+# Max PSI requests per minute (to stay within API quotas)
+rate_limit_per_min: 60
+
+# Default Lighthouse strategy
+default_strategy: mobile
+
+# ---------------------------------------------------------------------------
+# Cache settings
+# ---------------------------------------------------------------------------
+
+# Enable caching of HTML and PSI results
+cache_enabled: true
+
+# Directory to store cache files (relative to output dir or absolute)
+cache_dir: out/cache
+
+# Resume from existing leads.json (skip already-processed URLs)
+resume_enabled: false
+
+# ---------------------------------------------------------------------------
+# Verification settings
+# ---------------------------------------------------------------------------
+
+# Strict mode: exit with error on hard invariant failures
+verify_strict: true
