@@ -25,6 +25,14 @@ cache_enabled: true
 # Directory to store cache files (relative to output dir or absolute)
 cache_dir: out/cache
 
+# Cache time-to-live in seconds (default: 7 days = 604800)
+# Set to 0 to disable TTL (cache never expires)
+cache_ttl_seconds: 604800
+
+# Cache partial/incomplete results (e.g., HTML succeeded but PSI failed)
+# Set to false to only cache complete results
+cache_partial: true
+
 # Resume from existing leads.json (skip already-processed URLs)
 resume_enabled: false
 

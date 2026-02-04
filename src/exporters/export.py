@@ -1,8 +1,14 @@
+"""Export utilities for leads data."""
+from __future__ import annotations
+
 import csv
 import json
 from pathlib import Path
 
-from src.models.lead_audit import LeadAudit
+from src.models.lead_audit import LeadAudit, OpportunityItem
+
+# Maximum items to include in top3 columns
+MAX_TOP_ITEMS = 3
 
 # Stable column order for CSV export
 # Designed for Excel/Sheets compatibility
@@ -31,6 +37,12 @@ CSV_COLUMNS = [
     "cwv.cls",
     "cwv.ttfb_ms",
     "cwv.fcp_ms",
+    # PSI opportunities and diagnostics (human-readable)
+    "psi_opportunities_titles",
+    "psi_diagnostics_titles",
+    # PSI opportunities and diagnostics (machine-readable JSON)
+    "psi_opportunities_top3",
+    "psi_diagnostics_top3",
     # HTML meta
     "html_meta.http_status",
     "html_meta.final_url",
@@ -99,6 +111,46 @@ def _pains_summary(lead: LeadAudit) -> str:
     return "; ".join(f"{p.pain_id}({p.severity})" for p in lead.pains)
 
 
+def _opportunities_titles(items: list[OpportunityItem], max_items: int = MAX_TOP_ITEMS) -> str:
+    """Format opportunity/diagnostic titles as pipe-separated string.
+
+    Args:
+        items: List of OpportunityItem objects.
+        max_items: Maximum number of items to include.
+
+    Returns:
+        Pipe-separated titles string, or empty string if no items.
+
+    Example:
+        "Eliminate render-blocking resources|Reduce unused CSS|Serve images in modern formats"
+    """
+    if not items:
+        return ""
+    titles = [item.title for item in items[:max_items]]
+    return "|".join(titles)
+
+
+def _opportunities_json(items: list[OpportunityItem], max_items: int = MAX_TOP_ITEMS) -> str:
+    """Format opportunities/diagnostics as compact JSON array.
+
+    Args:
+        items: List of OpportunityItem objects.
+        max_items: Maximum number of items to include.
+
+    Returns:
+        Compact JSON string of [{id, title, impact}, ...], or "[]" if no items.
+
+    Example:
+        '[{"id":"render-blocking-resources","title":"Eliminate render-blocking resources","impact":"high"}]'
+    """
+    if not items:
+        return "[]"
+    top_items = items[:max_items]
+    # Use compact JSON format for Excel compatibility
+    data = [{"id": item.id, "title": item.title, "impact": item.impact} for item in top_items]
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
+
 def export_json(leads: list[LeadAudit], path: Path) -> None:
     """Export leads as a JSON array."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -107,12 +159,27 @@ def export_json(leads: list[LeadAudit], path: Path) -> None:
 
 
 def export_csv(leads: list[LeadAudit], path: Path) -> None:
-    """Export leads as CSV with stable column order. UTF-8 with BOM for Excel."""
+    """Export leads as CSV with stable column order. UTF-8 with BOM for Excel.
+
+    Includes PSI opportunities and diagnostics in both human-readable (pipe-separated)
+    and machine-readable (JSON) formats.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS, extrasaction="ignore")
         writer.writeheader()
         for lead in leads:
             flat = _flatten(lead.model_dump())
+
+            # Add derived fields
             flat["pains_summary"] = _pains_summary(lead)
+
+            # PSI opportunities (human-readable titles)
+            flat["psi_opportunities_titles"] = _opportunities_titles(lead.psi_opportunities)
+            flat["psi_diagnostics_titles"] = _opportunities_titles(lead.psi_diagnostics)
+
+            # PSI opportunities (machine-readable JSON)
+            flat["psi_opportunities_top3"] = _opportunities_json(lead.psi_opportunities)
+            flat["psi_diagnostics_top3"] = _opportunities_json(lead.psi_diagnostics)
+
             writer.writerow(flat)
