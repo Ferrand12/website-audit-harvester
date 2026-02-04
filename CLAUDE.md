@@ -24,9 +24,6 @@ python main.py --input data/sample_urls.csv --output out --force
 # Resume interrupted run
 python main.py --input data/sample_urls.csv --output out --resume
 
-# Skip PSI API key validation
-python main.py --input data/sample_urls.csv --output out --skip-psi-validation
-
 # Verify data integrity
 python main.py verify --input out/leads.json --report out/verify_report.json
 
@@ -101,9 +98,9 @@ CSV (URLs) → LeadAudit.from_url()
 - Thread-safe with blocking acquire
 
 **PSI Validation:**
-- API key validated on startup (lightweight test request)
-- Clear error messages for invalid/forbidden keys
-- Skip validation with `--skip-psi-validation` flag
+- Runs without API key (may be rate-limited by Google)
+- With API key: better rate limits and reliability
+- Set key via `config/config.yaml` or `PSI_API_KEY` env var
 
 **Observability (`PSIStats`):**
 - Tracks: calls_made, cache_hits, rate_limited_waits, errors
@@ -151,10 +148,11 @@ CSV (URLs) → LeadAudit.from_url()
 - CWV: LCP, INP, CLS, TTFB, FCP
 - Top 3 opportunities + diagnostics with impact classification
 
-**API Key Validation:**
-- `validate_api_key()` - lightweight test request on startup
-- `PSIValidationError` - clear error with HTTP code
+**API Key Handling:**
+- `validate_api_key()` validates key on startup if configured
+- `PSIValidationError` raised with clear HTTP error codes
 - Handles: 400 (bad format), 401 (invalid), 403 (forbidden), 429 (rate limited)
+- Without key: runs with Google's public rate limits (may get 429 errors)
 
 **Statistics Tracking:**
 - `PSIStats` dataclass with thread-safe counters
